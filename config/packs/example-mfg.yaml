@@ -1,0 +1,168 @@
+# RecordLint 示例规则包：民品机加/装配类外购件质量记录
+#
+# 规则包 = 表单类型清单（forms）+ 表单专项规则（rules_f）+ 对通用规则的组织级覆盖（overrides）。
+# 每个组织的内部表单与口径不同，请复制本文件改名后按自己的表单维护；本示例仅供演示与测试。
+# 加载：config/packs/ 下的 *.yaml 按文件名顺序自动加载；audit/serve 加 --no-packs 可关闭。
+
+meta:
+  name: example-mfg
+  version: "1.0"
+  description: 示例规则包（机加/装配类外购件）
+
+forms:
+  # 顺序即优先级：越靠前越具体。form 为表单类型名，keywords 命中任一即判为该类型。
+  patterns:
+    - {form: 卷宗目录, keywords: [卷宗表格目录, 卷宗目录, 表格目录]}
+    - {form: 质量证明单, keywords: [质量证明单, 证明单]}
+    - {form: 流水卡片, keywords: [流水卡片, 流水作业卡]}
+    - {form: 配套单, keywords: [配套单]}
+    - {form: 装配信息单, keywords: [装配信息单]}
+    - {form: 呈报单, keywords: [产品质量审查报告单, 呈报单]}
+    - {form: 故障修理通知单, keywords: [故障修理通知单]}
+    - {form: 故障检查表, keywords: [故障检查表]}
+    - {form: 代料单, keywords: [代料单]}
+    - {form: 入库单据, keywords: [入库质量发票, 零件入库标签, 入库票]}
+    # 称重表、流量记录表、动平衡报告都属检验记录类，归到同一类型即可复用检验记录的规则
+    - {form: 检验记录, keywords: [成品检验记录, 工序检验记录, 检验记录, 复验记录, 试验记录,
+                                零件称重表, 称重表, 称重记录, 重量记录,
+                                流量记录表, 流量记录, 流量试验, 扭矩记录, 压力试验记录]}
+  # 本单位内部表单：适用全部通用填写规则
+  internal: [质量证明单, 流水卡片, 配套单, 装配信息单, 呈报单, 故障修理通知单, 故障检查表,
+             代料单, 入库单据, 检验记录, 配套数据表]
+  # 结构特征兜底：标题被 OCR 漏读或只写零组件名称时，用表头栏目组合判定
+  structural:
+    - {all: [炉号, 材料], form: 配套数据表}
+    - {all: [型号, 检验员], form: 质量证明单}
+    - {all: [批次顺序号, 实际值], form: 质量证明单}
+    - {all: [零件件号, 检验员], form: 质量证明单}
+    - {all: [装配处, 批次顺序号], form: 质量证明单}
+    - {all: [规定, 实际, 检验员], form: 质量证明单}
+    - {all: [零件号, 重量, 检验员], form: 检验记录}
+
+# 对通用规则的组织级覆盖：只写要改的字段
+overrides:
+  A12_special_record_empty: {enabled: true}
+  A15_missing_unit_special:
+    enabled: true
+    params: {keywords: [流量, 泄漏率, 泄漏量, 扭矩, 压力, 动平衡]}
+  A16_multi_point_record: {enabled: true}
+  # 通用层只排除供方文件；本包把视觉类规则限定到本包的内部表单，并追加本包专有栏目名
+  B04_blank_cell_no_slash:
+    params:
+      applies_to: [质量证明单, 流水卡片, 配套单, 装配信息单, 检验记录, 呈报单]
+      downstream_whitelist: [装配处, 组合件号, 组合件, 操作者, 工人]
+      field_whitelist: [型号, 零件号, 零件件号, 零（组）件号, 批次号, 批次顺序号,
+                        设计图版次, 材料牌号, 原材料炉批号, 锻件生产厂, 特殊记载,
+                        规定, 实际, 实测值, 检验员, 备注, 页数, 单台数量,
+                        所带软件, 复核人, 检验结论]
+  B07_inspector_seal_missing:
+    params: {applies_to: [质量证明单, 检验记录, 流水卡片]}
+  B08_no_red_seal_on_page:
+    params: {applies_to: [质量证明单, 检验记录, 流水卡片, 呈报单]}
+  U03_unit_page_number_missing:
+    params: {exclude_forms: [供方合格证, 产品合格证, 卷宗目录, 配套数据表]}
+
+# 表单专项规则（判定逻辑在 qaudit/rules_f.py，此处只配参数与适用表单）
+rules_f:
+  F01_assembly_slash_forbidden:
+    enabled: true
+    level: HIGH
+    title: “装配处”栏不允许划“/”
+    clause: 示例包：由下游填写的栏目本单位不应划「/」
+    params:
+      applies_to: ["质量证明单"]
+
+  F02_design_version_missing:
+    enabled: true
+    level: MEDIUM
+    title: 未见“设计图版次”信息
+    clause: 示例包：表头无「设计图版次」栏时须在备注栏注明版次
+    params:
+      applies_to: ["质量证明单"]
+
+  F03_report_page_count:
+    enabled: true
+    level: HIGH
+    title: 呈报单未注明页数
+    clause: 示例包：审查报告单应注明总页数
+    params:
+      applies_to: ["质量证明单", "呈报单"]
+
+  F04_repair_no_seal:
+    enabled: true
+    level: HIGH
+    title: 故障修理通知单未见检验印章
+    clause: 示例包：返修记录应盖章
+    params:
+      applies_to: ["故障修理通知单"]
+      min_red_pixel_ratio: 0.00002
+
+  F05_repair_no_closure:
+    enabled: true
+    level: HIGH
+    title: 超差批复缺少检验闭环结论
+    clause: 示例包：返修结论应逐条闭环并盖章、填日期
+    params:
+      applies_to: ["故障修理通知单"]
+      trigger_keywords: ["超差", "同意使用", "满足设计要求", "让步接收"]
+      closure_keywords: ["已退回", "已隔离", "已闭环", "已修复", "闭环"]
+
+  F06_inspection_header_incomplete:
+    enabled: true
+    level: HIGH
+    title: 检验记录首页表头不完整
+    clause: 示例包：首页检验记录表头应填写完整
+    params:
+      applies_to: ["检验记录"]
+      required_fields: ["零件号", "批次"]
+
+  F07_reject_note_missing:
+    enabled: true
+    level: MEDIUM
+    title: 不合格记录未备注拒收单编号
+    clause: 示例包：拒收记录应有编号
+    params:
+      applies_to: ["检验记录", "质量证明单"]
+      trigger_keywords: ["超差", "不合格", "废品"]
+
+  F08_hardness_record_format:
+    enabled: true
+    level: LOW
+    title: 硬度值记录形式待确认
+    clause: 示例包：硬度记录写法（无序号时记范围值；抽检注明抽样数）
+    params:
+      applies_to: ["检验记录", "质量证明单"]
+
+  F09_label_quantity_empty:
+    enabled: true
+    level: HIGH
+    title: 入库标签数量栏空白
+    clause: 示例包：入库标签的数量栏不得为空
+    params:
+      applies_to: ["入库单据"]
+      required_fields: ["入库箱数", "装箱数量"]
+
+  F10_substitute_no_pairing:
+    enabled: true
+    level: MEDIUM
+    title: 代料单未备注配套关系
+    clause: 示例包：代用料单应备注配套关系
+    params:
+      applies_to: ["代料单"]
+      keywords: ["配套", "序列号", "序号"]
+
+  F11_report_batch_note:
+    enabled: true
+    level: MEDIUM
+    title: 呈报单未备注组件批次号及序列号
+    clause: 示例包：审查报告单页面下方应备注批次
+    params:
+      applies_to: ["呈报单"]
+
+  F12_cert_closure_note:
+    enabled: true
+    level: MEDIUM
+    title: 合格证呈报未备注闭环状态
+    clause: 示例包：合格证流转闭环应有备注
+    params:
+      applies_to: ["产品合格证", "供方合格证"]

@@ -1,0 +1,13 @@
+路径	表单	注入的违规
+batch-0001/page_001.png	供方合格证	无注入
+batch-0001/page_002.png	质量证明单	A01 日期未写满 8 位
+batch-0001/page_003.png	检验记录	无注入
+batch-0001/page_004.png	质量证明单	A02 范围值用短横
+batch-0001/page_005.png	质量证明单	B03 印章压日期; B13 印章倒盖; A13 确认章措辞不符
+batch-0001/page_006.png	检验记录	无注入
+batch-0002/page_001.png	供方合格证	无注入
+batch-0002/page_002.png	检验记录	无注入
+batch-0002/page_003.png	质量证明单	B05 确认章位置不在右下角
+batch-0002/page_004.png	质量证明单	A06 单位大小写; A12 特殊记载栏空白
+batch-0002/page_005.png	质量证明单	B06 单页划改 4 处
+batch-0002/page_006.png	质量证明单	A06 单位大小写; B12 印章不清晰

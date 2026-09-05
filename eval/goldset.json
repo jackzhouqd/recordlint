@@ -1,0 +1,62 @@
+{
+  "_说明": "金标准集样例。由质量部逐页人工标注，是验收的唯一判据。评测时只比对本文件中出现过的页面，未标注的页面不参与计分。",
+  "_标注规范": [
+    "1. 每条 = 一个 (doc_id, page_no, rule_id) 三元组；同一页同一规则命中多次只记一条。",
+    "2. note 写明人工判定依据，便于复核时追溯。",
+    "3. 建议规模：300～500 页，覆盖质量证明单、流水卡片、检验记录、呈报单、复印件等各类形态。",
+    "4. 一经双方封存不得单方修改；规则调优只允许改代码与 rules.yaml，不允许改金标准。"
+  ],
+  "_标注人": "待填",
+  "_标注日期": "待填",
+  "findings": [
+    {
+      "doc_id": "batch-0001",
+      "page_no": 2,
+      "rule_id": "A13_copy_stamp_wording",
+      "note": "",
+      "reviewer": "质量部-张三"
+    },
+    {
+      "doc_id": "batch-0001",
+      "page_no": 2,
+      "rule_id": "B05_copy_stamp_position",
+      "note": "确认章盖在页面左下部，要求盖在右下角空白处"
+    },
+    {
+      "doc_id": "batch-0001",
+      "page_no": 3,
+      "rule_id": "A13_copy_stamp_wording",
+      "note": "同上，措辞不符"
+    },
+    {
+      "doc_id": "batch-0001",
+      "page_no": 3,
+      "rule_id": "B05_copy_stamp_position",
+      "note": "同上，位置不符"
+    }
+  ],
+  "false_positives": [
+    {
+      "doc_id": "batch-0001",
+      "page_no": 1,
+      "rule_id": "A09_page_number"
+    }
+  ],
+  "unsure": [
+    {
+      "doc_id": "batch-0001",
+      "page_no": 1,
+      "rule_id": "B04_blank_cell_no_slash"
+    }
+  ],
+  "reviewed_pages": [
+    [
+      "batch-0001",
+      1
+    ],
+    [
+      "batch-0001",
+      2
+    ]
+  ]
+}

@@ -1,0 +1,18 @@
+# 全部可离线安装，无需联网调用任何服务
+# 离线部署：先在有网机器上 pip download -r requirements.txt -d wheels，
+# 再把 wheels 目录拷入目标机器，pip install --no-index --find-links=wheels -r requirements.txt
+opencv-python-headless>=4.8
+rapidocr-onnxruntime>=1.3   # OCR 模型随包（约 15MB），不联网下载
+onnxruntime>=1.16
+PyMuPDF>=1.23               # PDF 渲染
+numpy>=1.24
+Pillow>=10.0                # TIFF 回退解码
+PyYAML>=6.0                 # 规则库
+pytest>=7.4                 # 测试
+
+# 仅「模型」页的训练用得到；不装也能跑完整的审核与复核流程，
+# 只是无法训练新的印章状态模型（推理侧只用 numpy，不依赖它）。
+scikit-learn>=1.3
+
+# 前端不走 pip：htmx 与 Chart.js 作为静态文件随包分发于
+# qaudit/web/static/vendor/，运行期不发起任何外部网络请求。

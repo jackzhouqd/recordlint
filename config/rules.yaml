@@ -1,0 +1,371 @@
+# RecordLint 规则库
+# 通用填写规则（A/B/U 类）；表单专项规则见 config/packs/
+#
+# 本文件是通用层规则基线（A/B/U 类），与代码解耦；表单专项规则与表单类型清单由 config/packs/ 下的规则包提供。
+#   enabled  : 是否启用
+#   level    : CRITICAL(阻断) / HIGH(应改) / MEDIUM(关注) / LOW(提示)
+#   clause   : 管理要求原文条款出处，用于疑点清单溯源
+#   params   : 规则参数，改参数不用改代码
+
+meta:
+  name: RecordLint 通用规则
+  version: "1.0"
+  source: 内置
+
+# ============ A 类：文本确定性规则（OCR 成功即可判定）============
+rules_a:
+  A01_date_format:
+    enabled: true
+    level: HIGH
+    title: 日期未写满 8 位或分隔符不规范
+    clause: 日期按 YYYY.MM.DD 写满 8 位（通用惯例；参照 GB/T 7408 的紧凑表示）
+    params:
+      separator: "."
+      # 含“年月日”的预印表单栏位不适用本规则
+      skip_if_contains: ["年", "月", "日"]
+      exclude_forms: ["供方合格证", "产品合格证"]   # 供方自制证明书不适用公司表单格式要求
+
+  A02_range_symbol:
+    enabled: true
+    level: HIGH
+    title: 范围值使用短横而非“～”
+    clause: 范围值用波浪号「～」连接，不用短横（参照 GB/T 15835 出版物上数字用法）
+    params:
+      # 仅在带计量单位/Φ 等测量语境下判定，避免误伤批次号(22-02-10-7)、零件号
+      units: ["℃", "MPa", "mm", "kg", "HRC", "HRB", "HBW", "HB", "m3/h", "m³/h", "N", "kN", "g"]
+
+  A03_diameter_symbol:
+    enabled: true
+    level: HIGH
+    title: 直径符号未统一使用大写 Φ
+    clause: 直径符号统一用大写希腊字母 Φ（工程制图惯例）
+    params:
+      forbidden: ["φ", "Ф", "ф", "∅", "ø", "Ø"]
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  A04_diameter_range:
+    enabled: true
+    level: HIGH
+    title: 直径范围值缺少第二个 Φ
+    clause: 直径范围值写成「ΦXX～ΦXX」，两端都带 Φ（工程制图惯例）
+
+  A05_unit_mm_redundant:
+    # 默认关闭：外购/交付外厂的记录“须填写计量单位”，本条只适用厂内手写记录。
+    # 若要审厂内记录，把 enabled 改为 true 即可。
+    enabled: false
+    level: LOW
+    title: 计量单位 mm 未省略
+    clause: 计量单位为 mm 时可省略不写（规则包可关闭）
+    params:
+      note: 交付外厂的质量记录须填写计量单位，故默认仅作提示
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  A06_unit_case:
+    enabled: true
+    level: HIGH
+    title: 计量单位大小写不符合 GB3100
+    clause: 量和单位按 GB 3100 / GB 3101 书写，注意大小写
+    params:
+      wrong_to_right:
+        Kg: kg
+        KG: kg
+        KM: km
+        Mm: mm
+        MM: mm
+        HZ: Hz
+        Mpa: MPa
+        MPA: MPa
+
+  A07_square_cubic_unit:
+    enabled: true
+    level: MEDIUM
+    title: 面积/体积单位未写成 m(2)/m(3)
+    clause: 面积/体积单位统一写法（参数化：m2/m3 或 m(2)/m(3)）
+    params:
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  A08_chinese_numeral_unit:
+    enabled: true
+    level: HIGH
+    title: 使用汉字数量或单位
+    clause: 数量与单位不用汉字表述（参照 GB/T 15835）
+
+  A09_page_number:
+    enabled: true
+    level: MEDIUM
+    title: 多页记录页码格式不规范或缺失
+    clause: 多页记录逐页标注页码与总页数（通用惯例）
+    params:
+      min_pages: 2
+      strict_order: false     # 厂内预印表单多为“共X页第Y页”，默认两种顺序都算合规
+      flag_missing: false     # 需先识别归档单元，二期打通后再开
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  A10_decimal_precision:
+    enabled: true
+    level: MEDIUM
+    title: 实测值小数位数超过 3 位
+    clause: 未规定值时实测值小数位数不超过上限（默认 3 位，可参数化）
+    params:
+      max_decimals: 3
+      exclude_forms: ["供方合格证", "产品合格证"]
+      # 该条仅适用“技术文件未规定值”的场合，用称重类关键词收窄，避免误伤化学成分等规定值
+      require_keywords: ["称重", "重量", "净重", "毛重"]
+
+  A11_tolerance_format:
+    enabled: true
+    level: MEDIUM
+    title: 公差书写方式不规范
+    clause: 极限偏差一致时用 ±，不一致时分别写出（参照 GB/T 1800 系列惯例）
+
+  A12_special_record_empty:
+    enabled: false   # 通用层默认关闭：备注类栏目的名称与填法因组织而异；示例包 overrides 启用
+    level: HIGH
+    title: “特殊记载”栏无内容且未填“无”
+    clause: 备注类栏目无内容时应明示（示例包口径：填「无」）
+
+  A13_copy_stamp_wording:
+    enabled: true
+    level: HIGH
+    title: 复印/扫描件确认章措辞不符
+    clause: 复制件应有「与原件一致」类确认标识（措辞由规则包参数决定）
+    params:
+      required_text: 此件与原件一致
+      # 常见错误措辞
+      known_variants: ["复印件与原件一致", "与原件相符", "复印件与原件相符"]
+
+  A14_result_consistency:
+    enabled: true
+    level: HIGH
+    title: 同一份记录中“实际值”栏记录方式不一致
+    clause: 同一记录内同一特性的记录方式应一致（通用惯例）
+    params:
+      column_headers: ["实际", "实测值", "检验结论", "实 际"]
+
+  A15_missing_unit_special:
+    enabled: false   # 通用层默认关闭：特性关键词清单因产品而异；示例包 overrides 启用
+    level: HIGH
+    title: 动平衡/流量等实测值未注明单位
+    clause: 有量纲的实测值必须注明单位（特性清单由规则包指定）
+    params:
+      keywords: ["流量", "泄漏率", "泄漏量", "扭矩", "压力"]   # 示例包按产品特性覆盖
+      row_band_factor: 1.2    # 只查与关键词同一行的实测值，页级扫描会误伤尺寸值
+
+  A16_multi_point_record:
+    enabled: false   # 通用层默认关闭：多处测量的写法口径因组织而异；示例包 overrides 启用
+    level: MEDIUM
+    title: 多处测量未逐个写出实测值
+    clause: 要求多处测量时逐处写出实测值（示例包口径：≤5 处逐个写出）
+    params:
+      max_listed: 5
+      actual_headers: ["实际", "实 际", "实测值"]
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  A17_rounding_digits:
+    enabled: true
+    level: MEDIUM
+    title: 实测值有效位数少于规定值
+    clause: 有效位数与修约参照 GB/T 8170，实测值有效位数不少于规定值
+    params:
+      spec_headers: ["规定", "规定值", "图纸规定"]
+      actual_headers: ["实际", "实 际", "实测值"]
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  A18_reviewer_signature:
+    enabled: true
+    level: HIGH
+    title: 复印件“复核人”栏未签署
+    clause: 复制件的「复核人」栏应签署或加盖检验印（通用惯例）
+    params:
+      labels: ["复核人", "负责人", "审核人"]
+      # 确认章内的“负责人/复核人”是小号红字，OCR 常读不出。默认只在识别到该栏
+      # 却未见签署时判定；要把“整页未见该栏”也纳入，改为 true（会显著增加误报）。
+      flag_missing_field: false
+
+# ============ B 类：视觉判定规则（红章 / 划改 / 空栏）============
+rules_b:
+  B01_seal_tilt:
+    enabled: true
+    level: HIGH
+    title: 印章歪斜（未水平正向加盖）
+    clause: 印章应水平正向加盖，倾斜角不超过阈值（通用惯例，可参数化）
+    params:
+      max_tilt_deg: 10.0
+
+  B02_seal_overlap:
+    enabled: true
+    level: HIGH
+    title: 印章相互重叠
+    clause: 印章之间不应重叠（通用惯例）
+    params:
+      # 判据为“较小一枚被覆盖的比例”，相邻印章与检测碎片只是接边，覆盖率很低
+      min_coverage: 0.5
+      min_seal_area_ratio: 0.0006
+
+  B03_seal_on_date:
+    enabled: true
+    level: HIGH
+    title: 印章与日期重合
+    clause: 印章不应压盖日期（通用惯例）
+    params:
+      min_overlap_ratio: 0.25
+
+  B04_blank_cell_no_slash:
+    enabled: true
+    level: MEDIUM
+    title: 表单栏目空白且未划“/”明示
+    clause: 不适用栏目应明示（默认「/」，符号可参数化）
+    params:
+      # 需下游单位填写的栏目允许留空，不判定
+      downstream_whitelist: ["操作者", "工人"]   # 组织专有的下游栏目名由规则包 overrides 追加
+      min_cell_area_ratio: 0.0008
+      max_cell_area_ratio: 0.06
+      group_as_column: 3      # 同列连续空白 ≥3 格时合并为一条疑点
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]   # 通用层只排除供方文件；适用表单由规则包 overrides 给出
+      # 只判定已登记的表单栏目名，表格数据区的切分噪声不当作缺项。
+      # 质量部按需增删本表即可扩大/收窄判定范围。
+      # 置为 true 可把空栏判定放宽到全部栏目（提高召回，同时会增加误报），
+      # 对应「B11 空栏判定范围扩展」这一缺口项，口径由质量部确认后开启。
+      check_all_fields: false
+      field_whitelist:
+        ["零件号", "批次号", "材料牌号", "规定", "实际", "实测值", "检验员",
+         "备注", "页数", "复核人", "检验结论"]   # 通用栏目名；组织专有栏目由规则包 overrides 追加
+
+  B05_copy_stamp_position:
+    enabled: true
+    level: MEDIUM
+    title: “此件与原件一致”红章未加盖在右下角空白处
+    clause: 复制件确认章应盖在指定位置（默认右下角空白处，可参数化）
+    params:
+      right_bottom_x: 0.5   # 页面右半
+      right_bottom_y: 0.6   # 页面下部
+
+  B06_strikethrough_limit:
+    enabled: true
+    level: CRITICAL
+    title: 单页划改处数超限
+    clause: 单页划改处数不超过上限（默认 3 处，可参数化）
+    params:
+      max_per_page: 3
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  B07_inspector_seal_missing:
+    enabled: true
+    level: HIGH
+    title: “检验员”栏缺少检验印章
+    clause: 检验员栏应有印章或签署（通用惯例）
+    params:
+      column_headers: ["检验员", "检验", "质检"]
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]
+      region_red_ratio: 0.002   # 列区域/标签右侧同行的红色像素兜底阈值
+      skip_copy_pages: true     # 复印件上原章被复印成黑色，不据红章缺失判定
+
+  B08_no_red_seal_on_page:
+    enabled: true
+    level: HIGH
+    title: 整页无任何红色印章
+    clause: 打印输出的记录应有手工加盖的红色印章（规则包可关闭）
+    params:
+      min_red_pixel_ratio: 0.00002
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]
+      skip_copy_pages: true
+
+  B09_page_number_position:
+    # 默认关闭：实测厂内表单页码多印在右下角或页眉，是否按“页脚中间”执行需质量部确认口径。
+    # 确认后把 enabled 改为 true 即可启用。
+    enabled: false
+    level: LOW
+    title: 页码未记在页脚中间位置
+    clause: 页码应位于页脚指定位置（默认居中，可参数化）
+    params:
+      footer_from: 0.88
+      center_from: 0.33
+      center_to: 0.67
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]
+
+  B10_pen_color:
+    enabled: true
+    level: MEDIUM
+    title: 检出蓝色笔迹（应用黑色中性笔）
+    clause: 手写记录用黑色笔（可参数化）
+    params:
+      min_blue_ratio: 0.0006
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  # ---- B12 / B13 由「模型」页训练并上线的印章状态分类器驱动 ----
+  # 模型只回答“这枚章是什么状态”，哪些状态算违规、置信度门槛多少全在这里配置，
+  # 验收时能解释“为什么判它不合格”，不做黑盒。
+  # 未上线模型时两条都自动跳过，不报错、不影响其余判定。
+
+  B12_seal_clarity:
+    # 真实缺陷与合成退化差得远，必须有足量真实标注才能验收。
+    # 建议先保持 enabled: true 但不上线模型（规则自动跳过），
+    # 待质量部标注真实样本、重训并在真实验证集上达标后再上线。
+    enabled: true
+    level: MEDIUM
+    title: 印章不清晰或不完整（缺角/模糊/漏墨）
+    clause: 印章应清晰、完整（模型驱动，需本地标注训练）
+    params:
+      # 质量部可按现场口径增删，例如认为“漏墨”可接受就去掉 faint
+      reject_labels: ["chipped", "blurred", "faint"]
+      # 置信度门槛。宁可漏报不误报——模型只作提示，不作结论
+      min_confidence: 0.75
+      pad_ratio: 0.15
+      max_per_page: 12
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+  B13_seal_upside_down:
+    # 倒盖的合成即真实（旋转 180°），不需要人工标注就能训到可用，
+    # 因此是模型规则里最先能上线的一条。
+    enabled: true
+    level: HIGH
+    title: 印章倒盖（未水平正向加盖）
+    clause: 印章不应倒盖（模型驱动，合成样本即可训练）
+    params:
+      reject_labels: ["upside_down"]
+      min_confidence: 0.80
+      pad_ratio: 0.15
+      max_per_page: 12
+      exclude_forms: ["供方合格证", "产品合格证"]
+
+# ============ F 类：表单专项规则由规则包提供（config/packs/*.yaml），通用层不含 ============
+rules_f: {}
+
+# ============ U 类：单据级要求（依赖单据切分，判定单元是一份完整表单）============
+rules_u:
+  U01_unit_page_missing:
+    enabled: true
+    level: CRITICAL
+    title: 单据缺页
+    clause: 单据声明页数与实际页数应一致（通用惯例）
+    params:
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]
+      # 默认关闭“首页页码非第1页即缺前页”的判据：供方证明单在归档时本就按零件抽页装订，
+      # 前序页不在本档案属常态。若质量部要求供方文件整套随带，改为 true 即可启用。
+      flag_missing_head: false
+
+  U02_unit_page_sequence:
+    enabled: true
+    level: HIGH
+    title: 单据内页码不连续或重复
+    clause: 单据页码应连续、不重复（通用惯例）
+    params:
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]
+
+  U03_unit_page_number_missing:
+    enabled: true
+    level: MEDIUM
+    title: 多页单据存在未填页码的页
+    clause: 多页单据每页应有页码（通用惯例）
+    params:
+      min_pages: 2
+      exclude_forms: ["供方合格证", "产品合格证", "卷宗目录"]
+
+  U04_duplicate_record:
+    enabled: true
+    level: HIGH
+    title: 同一份记录疑似重复传递
+    clause: 同一记录不应重复传递（通用惯例）
+    params:
+      min_text_len: 60
+      exclude_forms: ["卷宗目录"]

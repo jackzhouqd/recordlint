@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>印章样本标注 · 第 __PAGE_NO__ / __PAGE_TOTAL__ 页</title>
+<style>
+ body{font-family:"微软雅黑","宋体",sans-serif;margin:0;background:#f4f5f7;color:#1c2128}
+ header{background:#1f2d3d;color:#fff;padding:14px 24px}
+ header h1{margin:0 0 4px;font-size:17px}
+ header .sub{opacity:.75;font-size:12px}
+ .wrap{padding:16px 24px 120px}
+ .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+ .cell{background:#fff;border:2px solid #e1e4e8;border-radius:6px;padding:6px;text-align:center;
+       cursor:pointer;position:relative;transition:border-color .1s}
+ .cell:hover{border-color:#0366d6}
+ .cell.cur{border-color:#0366d6;box-shadow:0 0 0 3px rgba(3,102,214,.25)}
+ .cell img{max-width:100%;max-height:96px;display:block;margin:0 auto;image-rendering:auto}
+ .cell .loc{font-size:10px;color:#8b949e;margin-top:4px;overflow:hidden;text-overflow:ellipsis;
+            white-space:nowrap}
+ .cell .tag{position:absolute;top:4px;left:4px;font-size:10px;color:#fff;border-radius:3px;
+            padding:1px 5px;display:none}
+ .cell[data-label] .tag{display:block}
+ .cell[data-label="ok"]{border-color:#1a7f37}
+ .cell[data-label="ok"] .tag{background:#1a7f37}
+ .cell[data-label="chipped"]{border-color:#b3001b}
+ .cell[data-label="chipped"] .tag{background:#b3001b}
+ .cell[data-label="blurred"]{border-color:#b8860b}
+ .cell[data-label="blurred"] .tag{background:#b8860b}
+ .cell[data-label="faint"]{border-color:#8250df}
+ .cell[data-label="faint"] .tag{background:#8250df}
+ .cell[data-label="upside_down"]{border-color:#0969da}
+ .cell[data-label="upside_down"] .tag{background:#0969da}
+ .cell[data-label="not_seal"]{border-color:#6e7781;opacity:.5}
+ .cell[data-label="not_seal"] .tag{background:#6e7781}
+ .cell.hide{display:none}
+ #bar{position:fixed;bottom:0;left:0;right:0;background:#1f2d3d;color:#fff;padding:10px 24px;
+      display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;z-index:9}
+ #bar button{background:#2f4358;color:#fff;border:1px solid #46617e;border-radius:4px;
+             padding:5px 12px;cursor:pointer;font-size:13px}
+ #bar button:hover{background:#3d5872}
+ #bar .grow{margin-left:auto}
+ .keys{background:#fff;border:1px solid #e1e4e8;border-radius:6px;padding:10px 14px;
+       margin-bottom:14px;font-size:13px;display:flex;gap:18px;flex-wrap:wrap}
+ .keys b{display:inline-block;min-width:18px;height:18px;line-height:18px;text-align:center;
+         background:#1f2d3d;color:#fff;border-radius:3px;margin-right:5px;font-size:11px}
+ #zoom{position:fixed;pointer-events:none;border:2px solid #0366d6;background:#fff;
+       border-radius:6px;padding:4px;display:none;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+ #zoom img{max-width:320px;max-height:320px;display:block}
+</style>
+</head>
+<body>
+<header>
+  <h1>印章样本标注 · 第 __PAGE_NO__ / __PAGE_TOTAL__ 页</h1>
+  <div class="sub">依据通用做法「印章须清晰、完整、水平正向加盖」。
+    标注结果保存在本机浏览器，可随时关闭续标；标完点右下角导出。全程离线，数据不离开本机。</div>
+</header>
+
+<div class="wrap">
+  <div class="keys" id="keys"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div id="zoom"><img alt="放大"></div>
+
+<div id="bar">
+  <span id="stat">未标注 0</span>
+  <button data-filter="all">全部</button>
+  <button data-filter="todo">仅未标注</button>
+  <button id="undo">撤销上一步 (Backspace)</button>
+  <span class="grow"></span>
+  <button id="export">导出标注 JSON</button>
+  <button id="clear">清空本页标注</button>
+</div>
+
+<script>
+(function () {
+  var DATA = __DATA__;
+  var LABELS = __LABELS__;          // { "1": ["ok","合格（清晰完整正向）"], ... }
+  var PAGE_NO = "__PAGE_NO__";
+  var KEY = "qaudit_seal_labels::page" + PAGE_NO;
+
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { store = {}; }
+  var history = [];
+  var cursor = 0;
+
+  // ---- 快捷键说明
+  var keysBox = document.getElementById("keys");
+  Object.keys(LABELS).forEach(function (k) {
+    var span = document.createElement("span");
+    span.innerHTML = "<b>" + k + "</b>" + LABELS[k][1];
+    keysBox.appendChild(span);
+  });
+  var tip = document.createElement("span");
+  tip.style.color = "#6e7781";
+  tip.textContent = "← → 移动 ｜ Backspace 撤销 ｜ 鼠标悬停放大";
+  keysBox.appendChild(tip);
+
+  // ---- 网格
+  var grid = document.getElementById("grid");
+  var cells = DATA.map(function (item, i) {
+    var d = document.createElement("div");
+    d.className = "cell";
+    d.dataset.id = item.id;
+    d.dataset.idx = i;
+    d.innerHTML =
+      '<span class="tag"></span>' +
+      '<img src="data:image/jpeg;base64,' + item.img + '" alt="">' +
+      '<div class="loc">' + item.doc + " p" + item.page + "</div>";
+    d.addEventListener("click", function () { setCursor(i); });
+    grid.appendChild(d);
+    return d;
+  });
+
+  function labelName(code) {
+    for (var k in LABELS) { if (LABELS[k][0] === code) return LABELS[k][1]; }
+    return code;
+  }
+
+  function paint() {
+    var todo = 0, counts = {};
+    cells.forEach(function (c) {
+      var v = store[c.dataset.id];
+      if (v) {
+        c.dataset.label = v;
+        c.querySelector(".tag").textContent = labelName(v).slice(0, 2);
+        counts[v] = (counts[v] || 0) + 1;
+      } else {
+        delete c.dataset.label;
+        c.querySelector(".tag").textContent = "";
+        todo++;
+      }
+    });
+    var parts = Object.keys(counts).map(function (k) { return labelName(k) + " " + counts[k]; });
+    var head = todo === 0 && cells.length
+      ? "✅ 本页已标完，请点右下角「导出标注 JSON」"
+      : "共 " + cells.length + " 枚｜未标注 " + todo;
+    document.getElementById("stat").textContent =
+      head + (parts.length ? "｜" + parts.join("　") : "");
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    paint();
+  }
+
+  function setCursor(i) {
+    if (i < 0 || i >= cells.length) return;
+    cells.forEach(function (c) { c.classList.remove("cur"); });
+    cursor = i;
+    cells[i].classList.add("cur");
+    cells[i].scrollIntoView({ block: "nearest" });
+  }
+
+  function nextTodo(from) {
+    for (var i = from; i < cells.length; i++) {
+      if (!cells[i].classList.contains("hide") && !store[cells[i].dataset.id]) return i;
+    }
+    return Math.min(from, cells.length - 1);
+  }
+
+  function assign(code) {
+    var c = cells[cursor];
+    if (!c) return;
+    history.push({ id: c.dataset.id, prev: store[c.dataset.id] });
+    store[c.dataset.id] = code;
+    save();
+    setCursor(nextTodo(cursor + 1));
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (LABELS[e.key]) { assign(LABELS[e.key][0]); e.preventDefault(); return; }
+    if (e.key === "ArrowRight") { setCursor(cursor + 1); e.preventDefault(); }
+    if (e.key === "ArrowLeft") { setCursor(cursor - 1); e.preventDefault(); }
+    if (e.key === "Backspace") { undo(); e.preventDefault(); }
+  });
+
+  function undo() {
+    var last = history.pop();
+    if (!last) return;
+    if (last.prev) { store[last.id] = last.prev; } else { delete store[last.id]; }
+    save();
+    for (var i = 0; i < cells.length; i++) {
+      if (cells[i].dataset.id === last.id) { setCursor(i); break; }
+    }
+  }
+  document.getElementById("undo").onclick = undo;
+
+  // ---- 悬停放大
+  var zoom = document.getElementById("zoom");
+  var zimg = zoom.querySelector("img");
+  grid.addEventListener("mouseover", function (e) {
+    var cell = e.target.closest(".cell");
+    if (!cell) return;
+    zimg.src = cell.querySelector("img").src;
+    zoom.style.display = "block";
+  });
+  grid.addEventListener("mousemove", function (e) {
+    var x = Math.min(e.clientX + 20, window.innerWidth - 340);
+    var y = Math.min(e.clientY + 20, window.innerHeight - 340);
+    zoom.style.left = x + "px";
+    zoom.style.top = y + "px";
+  });
+  grid.addEventListener("mouseout", function () { zoom.style.display = "none"; });
+
+  // ---- 过滤 / 导出 / 清空
+  document.querySelectorAll("#bar [data-filter]").forEach(function (btn) {
+    btn.onclick = function () {
+      var mode = btn.dataset.filter;
+      cells.forEach(function (c) {
+        c.classList.toggle("hide", mode === "todo" && !!store[c.dataset.id]);
+      });
+    };
+  });
+
+  document.getElementById("export").onclick = function () {
+    var payload = {
+      annotator: "",
+      page: PAGE_NO,
+      total_on_page: cells.length,
+      labeled: Object.keys(store).length,
+      label_set: LABELS,
+      labels: store
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "labels_" + String(PAGE_NO).padStart(3, "0") + ".json";
+    a.click();
+  };
+
+  document.getElementById("clear").onclick = function () {
+    if (confirm("清空本页全部标注？该操作不可撤销。")) { store = {}; history = []; save(); }
+  };
+
+  paint();
+  setCursor(nextTodo(0));
+})();
+</script>
+</body>
+</html>
