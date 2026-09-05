@@ -39,7 +39,7 @@ AGPL-3.0-or-later（见 `LICENSE`）。外部贡献需签署 `CLA.md`。**不要
 3. `python -m qaudit.cli audit samples/synthetic/batch-0001 --out out/smoke` 能出 `report.html`
 4. 改了 `config/rules.yaml` 或规则包：`docs/系统全景手册.md` 附录 A 与之一致（由脚本重生成，不手改）
 5. 涉及界面的改动：`python -m qaudit.cli serve` 起服务，六个入口各开一次无报错
-6. **对外发布前**：`docs/superpowers/` 是内部计划目录（含脱敏词表与原项目背景），不得随公开仓发布——发布分支上删除该目录，或把它移回 `D:\dev\pattern-radar`
+6. **对外发布前**：`docs/superpowers/` 是内部计划目录（含脱敏词表与原项目背景），不得随公开仓发布——已在 `.gitignore`，发布前用 `git check-ignore docs/superpowers` 确认
 
 ## 其他
 

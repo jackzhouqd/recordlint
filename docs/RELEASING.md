@@ -16,8 +16,8 @@ git check-ignore docs/superpowers/plans  # 必须被忽略
 
 | 平台 | 仓库 | 设置 |
 |---|---|---|
-| Gitee | `https://gitee.com/<你的账号>/recordlint` | 开源 · AGPL-3.0 · 语言 Python · 标签：质量管理、OCR、印章检测、离线部署、制造业 |
-| GitHub | `https://github.com/<你的账号>/recordlint` | Public · License AGPL-3.0 · Topics：qms, ocr, quality-records, seal-detection, offline, manufacturing, china |
+| Gitee | `https://gitee.com/zjqdcn/recordlint` | 开源 · AGPL-3.0 · 语言 Python · 标签：质量管理、OCR、印章检测、离线部署、制造业 |
+| GitHub | `https://github.com/jackzhouqd/recordlint` | Public · License AGPL-3.0 · Topics：qms, ocr, quality-records, seal-detection, offline, manufacturing, china |
 
 两边的简介一致：
 
@@ -26,8 +26,8 @@ git check-ignore docs/superpowers/plans  # 必须被忽略
 ## 2. 推送
 
 ```bash
-git remote add gitee  https://gitee.com/<你的账号>/recordlint.git
-git remote add github https://github.com/<你的账号>/recordlint.git
+git remote add gitee  https://gitee.com/zjqdcn/recordlint.git
+git remote add github https://github.com/jackzhouqd/recordlint.git
 git push gitee main
 git push github main
 git tag -a v1.2.0 -m "RecordLint 开源首版"
@@ -41,7 +41,7 @@ Gitee 建议开启「镜像仓库 → 从 GitHub 同步」或反向，二选一�
 
 - Gitee：补「项目介绍」页（复制 README 第一节）、上传 1 张复核工作台截图、开「Issues」与「PR」
 - GitHub：Release v1.2.0 附 `samples/synthetic/` 说明与 `report.html` 截图
-- 首发内容（知乎长文、公众号稿）见 `D:\dev\pattern-radar\报告\蒸馏\C3-开源云托管SaaS\发布\`（不在本仓）
+- 首发内容（知乎长文、公众号稿）在仓库外维护，不进本仓
 
 ## 4. 每次发版
 
